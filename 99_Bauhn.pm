@@ -27,12 +27,21 @@ my $socket = IO::Socket::INET->new(Proto=>'udp', LocalPort=>$port, Broadcast=>1)
                  die "Could not create listen socket: $!\n";
 $socket->autoflush();
 
+sub LogPacket(@)
+{
+    my @packet = @_;
+
+    my $str = sprintf("%02x " x @packet, @packet);
+    Log(1,$str);
+}
+
 sub Bauhn_Initialize($$)
 {
     my ($hash) = @_;
 
     $hash->{SetFn}     = "Bauhn_Set";
     $hash->{DefFn}     = "Bauhn_Define";
+    $hash->{ReadFn}    = "Bauhn_Read";
     $hash->{AttrList}  = "setList ". $readingFnAttributes;
 }
 
@@ -54,6 +63,8 @@ sub Bauhn_Define($$)
     $hash->{INTERVAL}    = $interval || 60;
     $hash->{STATE}       = $hash->{fhem}{bauhn}->{on} ? "on" : "off";
     $hash->{fhem}{id}    = $mac;
+    $hash->{FD}          = fileno($hash->{fhem}{bauhn}->{socket});
+    $selectlist{$macstr} = $hash;
 
     InternalTimer(gettimeofday()+$hash->{INTERVAL}, "Bauhn_GetUpdate", $hash, 0);
 
@@ -64,9 +75,14 @@ sub Bauhn_GetUpdate($)
 {
     my ($hash) = @_;
 
+    my $mac          = $hash->{fhem}{bauhn}->{mac};
+    my $reversed_mac = scalar(reverse($mac));
+    my $subscribe    = $fbk_preamble.$mac.$twenties.$reversed_mac.$twenties;
+
     # We need to do this to keep the discovery/subscription alive
-    my $mac = $hash->{fhem}{bauhn}->{mac};
-    $hash->{fhem}{bauhn} = findBauhn($mac);
+    my $socket = $hash->{fhem}{bauhn}->{socket};
+    my $saddr  = $hash->{fhem}{bauhn}->{saddr};
+    $socket->send($subscribe, 0, $saddr);
 
     InternalTimer(gettimeofday()+$hash->{INTERVAL}, "Bauhn_GetUpdate", $hash, 0);
 }
@@ -89,15 +105,38 @@ sub Bauhn_Set($@)
     }
     elsif ($args[0] eq "toggle") {
         $bauhn->{on} = $bauhn->{on} ? 0 : 1;
-        my $onoff = $bauhn->{on} ? "on" : "off";
-        controlBauhn($hash->{fhem}{bauhn}, $onoff);
-        $hash->{STATE} = $onoff;
+        my $status = $bauhn->{on} ? "on" : "off";
+        controlBauhn($hash->{fhem}{bauhn}, $status);
+        $hash->{STATE} = $status;
     }
     else {
         $list = "off:noArg on:noArg toggle:noArg";
     }
 
     return $list;
+}
+
+sub Bauhn_Read()
+{
+    my ($hash, $dev) = @_;
+
+    my $packet;
+    my $bauhn  = $hash->{fhem}{bauhn};
+    my $socket = $bauhn->{socket};
+    my $select = IO::Select->new($socket) || die "Could not create Select: $!\n";
+    while (my @ready = $select->can_read(0.1)) {
+        my $from = $socket->recv($packet,1024) || return 0;
+        my @data = unpack('C*', $packet);
+        if (substr($packet,6,6) eq $bauhn->{mac}) {
+            if (substr($packet,0,6) eq $onoff) {
+                $bauhn->{on}   = (substr($packet,-1,1) eq chr(1)) ? 1 : 0;
+                $hash->{STATE} = $hash->{fhem}{bauhn}->{on} ? "on" : "off";
+                readingsSingleUpdate($hash,"state",$hash->{STATE},1);
+            }
+        }
+    }
+
+    return undef;
 }
 
 sub findBauhnOnInterface($$)
