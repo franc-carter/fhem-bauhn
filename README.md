@@ -9,6 +9,6 @@ https://discuss.ninjablocks.com/t/aldi-remote-controlled-power-points-5-july-201
 
 Put the following in your fhem config file to use it
 
-define Study_Heater Bauhn AC:CF:23:24:11:80
+define PowerPoint Bauhn AC:CF:23:24:11:80
 
-attr Study_Heater setList off on
+attr PowerPoint setList off on
