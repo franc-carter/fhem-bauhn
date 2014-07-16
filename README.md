@@ -13,4 +13,4 @@ define NAME Bauhn XX:XX:XX:XX:XX:XX
 
 attr NAME setList off on
 
-where NAME is the name you wish to call the device and XX:XX:XX:XX:XX:XX is the MAX address of the device
+where NAME is the name you wish to call the device and XX:XX:XX:XX:XX:XX is the MAC address of the device
