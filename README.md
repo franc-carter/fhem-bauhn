@@ -9,6 +9,8 @@ https://discuss.ninjablocks.com/t/aldi-remote-controlled-power-points-5-july-201
 
 Put the following in your fhem config file to use it
 
-define PowerPoint Bauhn AC:CF:23:24:11:80
+define NAME Bauhn XX:XX:XX:XX:XX:XX
 
-attr PowerPoint setList off on
+attr NAME setList off on
+
+where NAME is the name you wish to call the device and XX:XX:XX:XX:XX:XX is the MAX address of the device
