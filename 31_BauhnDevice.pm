@@ -130,7 +130,7 @@ sub BauhnDevice_Define($$)
 
     subscribe($hash, $macstr);
 
-    InternalTimer(gettimeofday()+$hash->{INTERVAL}, "Bauhn_GetUpdate", $hash, 0);
+    InternalTimer(gettimeofday()+$hash->{INTERVAL}, "BauhnDevice_GetUpdate", $hash, 0);
 
     return undef;
 }
