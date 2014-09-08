@@ -7,7 +7,6 @@ use POSIX;
 use SetExtensions;
 use IO::Socket;
 use IO::Select;
-use IO::Interface::Simple;
 #use Data::Dumper;
 
 my $port = 10000;
